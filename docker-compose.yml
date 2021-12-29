@@ -1,15 +1,38 @@
-version: '2'
+version: '3'
 
 services:
-  postgres:
-    image: postgres:13-alpine
-    environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust
+  web:
+    build:
+      context: .
+      dockerfile: ./src/app/Dockerfile
+    command: bash -c "python ./src/manage.py migrate &&  python ./src/manage.py runserver && python ./src/manage.py createsuperuser"
+    volumes:
+      - ./:/opt/app/
+    networks:
+    - testNet
+    env_file:
+      - ./src/app/.env
     ports:
-     - 5432:5432
-    command: --autovacuum=off --fsync=off --synchronous_commit=off --full_page_writes=off --work_mem=12MB --max-connections=10 --max_wal_senders=0
+      - 8000:8000
+    depends_on:
+      - "postgres"
 
-  redis:
-    image: redis:6-alpine
+  postgres:
+    image: postgres:14.1-alpine
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=django
+    networks:
+    - testNet
     ports:
-      - 6379:6379
+    - 5432:5432
+    volumes:
+    - postgres_data:/var/lib/postgresql/data/
+
+networks:
+  testNet:
+    driver: bridge
+
+volumes:
+  postgres_data:    
